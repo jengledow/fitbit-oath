@@ -1,3 +1,13 @@
+/*Scopes we ask for:
+    1. respiratory_rate
+    2. heartrate
+    3. activity
+    4. temperature
+    5. cardio_fitness
+    6. sleep
+    7. oxygen_saturation
+*/
+
 import { format } from "date-format-parse";
 
 async function makeRequest(url){
@@ -10,6 +20,7 @@ async function makeRequest(url){
     })
 
     res = await res.json();
+    console.log(res);
     return res;
 }
 
@@ -34,19 +45,33 @@ function getYesterdayString(){
     return yesterdayString;
 }
 
+function getLastWeekString(){
+    const today = new Date();
+    let lastWeek = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000));
+    return format(lastWeek, 'YYYY-MM-DD');
+}
+
 const fitbit = {
-    getHeartRate: () => {
-        const params = {
-            'start-date': getYesterdayString(),
-            'end-date': 'today',
-            'user-id': JSON.parse(localStorage.getItem('fitbit-token')).user_id
-        }
-        let url = replaceParams('https://api.fitbit.com/1/user/[user-id]/activities/heart/date/[start-date]/[end-date].json', params);
-        return makeRequest(url);
+    getActivityLog: async () => {
+        //could be paginated if we want to
+        let queryParams = new URLSearchParams({
+            afterDate: getLastWeekString(),
+            sort: 'asc',
+            limit: 10,
+            offset: 0
+        })
+        return await makeRequest('https://api.fitbit.com/1/user/-/activities/list.json?' + queryParams.toString());
     },
-    getSleepLog: (uid) => {
-        return makeRequest(`/1/user/${uid}/activities/heart/date/[start-date]/[end-date].json`);
-    }
+    getCalories: async () => {
+        return await makeRequest('https://api.fitbit.com/1/user/-/activities/calories/date/today/7d.json')
+    },
+    getHeartRate: async () => {
+        return await makeRequest('https://api.fitbit.com/1/user/-/activities/heart/date/today/1d.json');
+    },
+    getSleepLog: async () => {
+        return await makeRequest(`https://api.fitbit.com/1.2/user/-/sleep/date/today.json`);
+    },
+    
 }
 
 export default fitbit; 
